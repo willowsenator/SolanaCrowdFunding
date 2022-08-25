@@ -1,10 +1,36 @@
 import './App.css';
+import idl from "./idl.json"
 import {useEffect, useState} from "react";
+import {clusterApiUrl, Connection, PublicKey, SystemProgram} from "@solana/web3.js";
+import {AnchorProvider, Program, utils} from "@project-serum/anchor";
+
+import {Buffer} from "buffer";
+window.Buffer = Buffer;
+
+const programId = new PublicKey(idl.metadata.address);
+const network = clusterApiUrl("devnet");
+const opts = {
+    preflightCommitment: "processed"
+}
 
 const App = () => {
     const [walletAddress, setWalletAddress] = useState(null);
     const solflare = window.solflare;
     const isSolflareInstalled = solflare && solflare.isSolflare;
+
+    const getProvider = () => {
+        const connection = new Connection(network, opts.preflightCommitment);
+        let provider = null;
+        if(isSolflareInstalled) {
+            provider = new AnchorProvider(
+                connection,
+                solflare,
+                opts.preflightCommitment
+            );
+        }
+        return provider;
+    }
+
     const checkIfWalletIsConnect = () => {
         try {
 
@@ -36,9 +62,38 @@ const App = () => {
         }
     }
 
+    const createCampaign = async() =>{
+        try {
+            const provider = getProvider();
+            const program = new Program(idl, programId, provider);
+            const [campaign] = await PublicKey.findProgramAddress(
+                [utils.bytes.utf8.encode("CampaignDEMO"),
+                    provider.wallet.publicKey.toBuffer()],
+                program.programId
+            );
+
+            await program.rpc.create('name', 'description',{
+                accounts:{
+                    campaign: campaign,
+                    user: provider.wallet.publicKey,
+                    systemProgram: SystemProgram.programId
+                }
+            });
+
+            console.log("Created a new campaign address: ", campaign.toString());
+
+        }
+        catch (error){
+            console.log("Error creating campaign account: ", error);
+        }
+    }
+
     const renderNotConnectedContainer = () => (
         <button onClick={connectWallet}>Connect to Wallet</button>
-    )
+    );
+    const renderConnectedContainer = () => (
+        <button onClick={createCampaign}>Create Campaign</button>
+    );
 
     useEffect(() => {
         const onLoad = async () => {
@@ -48,7 +103,10 @@ const App = () => {
         return () => window.removeEventListener("load", onLoad);
     },);
 
-    return <div className="App">{!walletAddress && renderNotConnectedContainer()}</div>
+    return <div className="App">
+        {!walletAddress && renderNotConnectedContainer()}
+        {walletAddress && renderConnectedContainer()}
+    </div>
 }
 
 export default App;
