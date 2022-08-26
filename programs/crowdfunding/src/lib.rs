@@ -41,8 +41,9 @@ pub mod crowdfunding {
     }
 
     pub fn donate(ctx: Context<Donate>, amount:u64) -> ProgramResult{
-        let ix = transfer(&ctx.accounts.campaign.key(),
+        let ix = transfer(
         &ctx.accounts.user.key(),
+        &ctx.accounts.campaign.key(),
         amount);
 
        invoke(
