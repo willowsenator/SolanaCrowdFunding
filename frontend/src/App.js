@@ -17,7 +17,9 @@ const App = () => {
     const [walletAddress, setWalletAddress] = useState(null);
     const [campaigns, setCampaigns] = useState([]);
     const solflare = window.solflare;
-    const isSolflareInstalled = solflare && solflare.isSolflare;
+    const phantom = window.phantom?.solana;
+    const isSolflareInstalled = solflare?.isSolflare;
+    const isPhantomInstalled = phantom?.isPhantom
 
     const getProvider = () => {
         const connection = new Connection(network, opts.preflightCommitment);
@@ -29,12 +31,18 @@ const App = () => {
                 opts.preflightCommitment
             );
         }
+        else if(isPhantomInstalled){
+            provider = new AnchorProvider(
+              connection,
+              phantom,
+              opts.preflightCommitment
+            );
+        }
         return provider;
     }
 
     const checkIfWalletIsConnect = () => {
         try {
-
             if (isSolflareInstalled) {
                 console.log("Solflare Wallet installed");
                 solflare.connect({onlyIfTrusted: true});
@@ -42,7 +50,15 @@ const App = () => {
                     console.log('Solflare Wallet Connected with publicKey: ', solflare.publicKey.toString());
                     setWalletAddress(solflare.publicKey.toString());
                 });
-            } else {
+            } else if(isPhantomInstalled){
+                console.log("Phantom Wallet installed");
+                phantom.connect({onlyIfTrusted: true});
+                phantom.on('connect', ()=>{
+                   console.log('Phantom Wallet Connected with publickey: ', phantom.publicKey.toString());
+                   setWalletAddress(phantom.publicKey.toString());
+                });
+            }
+            else {
                 console.log("Install a Solana Wallet");
 
             }
@@ -59,6 +75,13 @@ const App = () => {
             solflare.on('connect', () => {
                 console.log('Solflare Wallet Connected with publicKey: ', solflare.publicKey.toString());
                 setWalletAddress(solflare.publicKey.toString());
+            });
+        }
+        else if(isPhantomInstalled){
+            phantom.connect();
+            phantom.on('connect', ()=>{
+               console.log('Phantom Wallet Connected with publicKey: ', phantom.publicKey.toString());
+               setWalletAddress(phantom.publicKey.toString());
             });
         }
     }
